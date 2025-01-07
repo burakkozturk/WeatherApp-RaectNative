@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator, SafeAreaView, Image, Dimensions, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, SafeAreaView, Image, Dimensions, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import axios from 'axios';
 
 const { width, height } = Dimensions.get('window');
@@ -11,9 +11,10 @@ export default function App() {
   const [error, setError] = useState(null);
   const [isNight, setIsNight] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
+  const [searchCity, setSearchCity] = useState('');
+  const [currentCity, setCurrentCity] = useState('Prague,CZ');
 
-  const API_KEY = '*';
-  const CITY = 'Alaska,US';
+  const API_KEY = '856dd5c844a271db78e247c96deb2b80';
 
   const getBackgroundColor = (weatherCondition) => {
     if (!weatherCondition) return '#2193b0';
@@ -68,17 +69,35 @@ export default function App() {
     return now < data.sys.sunrise || now > data.sys.sunset;
   };
   
+  const handleSearch = async () => {
+    if (searchCity.trim()) {
+      setLoading(true);
+      try {
+        const response = await axios.get(
+          `https://api.openweathermap.org/data/2.5/weather?q=${searchCity}&appid=${API_KEY}&units=metric&lang=en`
+        );
+        setCurrentCity(searchCity);
+        setSearchCity('');
+        await getWeather();
+      } catch (err) {
+        setError('City not found. Please try another city name.');
+        setTimeout(() => setError(null), 3000);
+      }
+      setLoading(false);
+    }
+  };
+
   const getWeather = async () => {
     try {
       setLoading(true);
       setError(null);
       
       const weatherResponse = await axios.get(
-        `https://api.openweathermap.org/data/2.5/weather?q=${CITY}&appid=${API_KEY}&units=metric&lang=en`
+        `https://api.openweathermap.org/data/2.5/weather?q=${currentCity}&appid=${API_KEY}&units=metric&lang=en`
       );
       
       const forecastResponse = await axios.get(
-        `https://api.openweathermap.org/data/2.5/forecast?q=${CITY}&appid=${API_KEY}&units=metric&lang=en`
+        `https://api.openweathermap.org/data/2.5/forecast?q=${currentCity}&appid=${API_KEY}&units=metric&lang=en`
       );
       
       setIsNight(checkIfNight(weatherResponse.data));
@@ -144,6 +163,18 @@ export default function App() {
       <View style={styles.weatherContainer}>
         <Text style={styles.time}>{currentTime}</Text>
         
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search city..."
+            placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            value={searchCity}
+            onChangeText={(text) => setSearchCity(text)}
+            onEndEditing={handleSearch}
+            editable={true}
+          />
+        </View>
+
         <View style={styles.mainContent}>
           <Text style={styles.cityName}>{weather?.name || 'Unknown City'}</Text>
           <View style={styles.weatherInfo}>
@@ -234,12 +265,14 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   forecastDay: {
-    color: '#666666',
+    marginLeft: 60,
+    color: "#ffffff",
     fontSize: 14,
     fontWeight: '400',
     fontFamily: 'System',
   },
   forecastRight: {
+    marginRight: 60,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -267,5 +300,16 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
     fontFamily: 'System',
+  },
+  searchContainer: {
+    marginVertical: 20,
+  },
+  searchInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    color: '#ffffff',
+    height: 40,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    fontSize: 16,
   },
 }); 
