@@ -12,9 +12,9 @@ export default function App() {
   const [isNight, setIsNight] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
   const [searchCity, setSearchCity] = useState('');
-  const [currentCity, setCurrentCity] = useState('Prague,CZ');
+  const [currentCity, setCurrentCity] = useState('Berlin,DE');
 
-  const API_KEY = '856dd5c844a271db78e247c96deb2b80';
+  const API_KEY = '*';
 
   const getBackgroundColor = (weatherCondition) => {
     if (!weatherCondition) return '#2193b0';
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: -height * 0.1,
+    marginBottom: 300,
   },
   cityName: {
     fontSize: 32,
