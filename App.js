@@ -12,27 +12,12 @@ export default function App() {
   const [isNight, setIsNight] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
   const [searchCity, setSearchCity] = useState('');
-  const [currentCity, setCurrentCity] = useState('Berlin,DE');
+  const [currentCity, setCurrentCity] = useState('Chicago,US');
 
   const API_KEY = '*';
 
-  const getBackgroundColor = (weatherCondition) => {
-    if (!weatherCondition) return '#2193b0';
-
-    const condition = weatherCondition.toLowerCase();
-    if (condition.includes('clear')) {
-      return isNight ? '#1a2a6c' : '#2193b0';
-    } else if (condition.includes('clouds')) {
-      return isNight ? '#373B44' : '#2c3e50';
-    } else if (condition.includes('rain')) {
-      return '#000046';
-    } else if (condition.includes('snow')) {
-      return '#8e9eab';
-    } else if (condition.includes('mist')) {
-      return '#606c88';
-    } else {
-      return '#2193b0';
-    }
+  const getBackgroundColor = () => {
+    return isNight ? '#000000' : '#bde0fe';
   };
 
   const getWeatherEmoji = (weatherCondition) => {
@@ -57,9 +42,14 @@ export default function App() {
   };
 
   const updateTime = () => {
-    const now = new Date();
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
+    if (!weather?.timezone) return;
+
+    const localTime = new Date();
+    const utc = localTime.getTime() + (localTime.getTimezoneOffset() * 60000);
+    const cityTime = new Date(utc + (1000 * weather.timezone));
+    
+    const hours = cityTime.getHours().toString().padStart(2, '0');
+    const minutes = cityTime.getMinutes().toString().padStart(2, '0');
     setCurrentTime(`${hours}:${minutes}`);
   };
 
@@ -120,27 +110,28 @@ export default function App() {
 
   useEffect(() => {
     getWeather();
-    updateTime();
     
-    const weatherInterval = setInterval(getWeather, 300000);
     const timeInterval = setInterval(updateTime, 1000);
-    
-    return () => {
-      clearInterval(weatherInterval);
-      clearInterval(timeInterval);
-    };
+    return () => clearInterval(timeInterval);
   }, []);
+
+  // Weather verisi güncellendiğinde saati de güncelle
+  useEffect(() => {
+    if (weather) {
+      updateTime();
+    }
+  }, [weather]);
 
   if (loading || !weather) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: '#2193b0' }]}>
+      <View style={[styles.loadingContainer, { backgroundColor: '#000000' }]}>
         <ActivityIndicator size="large" color="#ffffff" />
         <Text style={styles.loadingText}>Loading Weather...</Text>
       </View>
     );
   }
 
-  const backgroundColor = weather?.weather?.[0]?.main ? getBackgroundColor(weather.weather[0].main) : '#2193b0';
+  const backgroundColor = getBackgroundColor();
 
   const getDayName = (date) => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -159,15 +150,18 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#000000' }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor }]}>
       <View style={styles.weatherContainer}>
-        <Text style={styles.time}>{currentTime}</Text>
+        <Text style={[styles.time, { color: isNight ? '#666666' : '#333333' }]}>{currentTime}</Text>
         
         <View style={styles.searchContainer}>
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { 
+              backgroundColor: isNight ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+              color: isNight ? '#ffffff' : '#000000'
+            }]}
             placeholder="Search city..."
-            placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            placeholderTextColor={isNight ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)'}
             value={searchCity}
             onChangeText={(text) => setSearchCity(text)}
             onEndEditing={handleSearch}
@@ -176,9 +170,11 @@ export default function App() {
         </View>
 
         <View style={styles.mainContent}>
-          <Text style={styles.cityName}>{weather?.name || 'Unknown City'}</Text>
+          <Text style={[styles.cityName, { color: isNight ? '#ffffff' : '#000000' }]}>
+            {weather?.name || 'Unknown City'}
+          </Text>
           <View style={styles.weatherInfo}>
-            <Text style={styles.temperature}>
+            <Text style={[styles.temperature, { color: isNight ? '#ffffff' : '#000000' }]}>
               {weather?.main && Math.round(weather.main.temp)}°
             </Text>
             <Text style={styles.weatherEmoji}>
@@ -189,11 +185,19 @@ export default function App() {
 
         <View style={styles.forecastContainer}>
           {getNextDaysWeather().map((item, index) => (
-            <View key={index} style={styles.forecastItem}>
-              <Text style={styles.forecastDay}>{getDayName(item.dt).slice(0, 3)}</Text>
+            <View key={index} style={[styles.forecastItem, {
+              borderTopColor: isNight ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+            }]}>
+              <Text style={[styles.forecastDay, { color: isNight ? '#ffffff' : '#000000' }]}>
+                {getDayName(item.dt).slice(0, 3)}
+              </Text>
               <View style={styles.forecastRight}>
-                <Text style={styles.forecastTemp}>{Math.round(item.main.temp)}°</Text>
-                <Text style={styles.forecastEmoji}>{getWeatherEmoji(item.weather[0].main)}</Text>
+                <Text style={[styles.forecastTemp, { color: isNight ? '#ffffff' : '#000000' }]}>
+                  {Math.round(item.main.temp)}°
+                </Text>
+                <Text style={styles.forecastEmoji}>
+                  {getWeatherEmoji(item.weather[0].main)}
+                </Text>
               </View>
             </View>
           ))}
