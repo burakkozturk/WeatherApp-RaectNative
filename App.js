@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator, SafeAreaView, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, SafeAreaView, Image, Dimensions, ScrollView } from 'react-native';
 import axios from 'axios';
 
 const { width, height } = Dimensions.get('window');
 
 export default function App() {
   const [weather, setWeather] = useState(null);
+  const [forecast, setForecast] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isNight, setIsNight] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
 
   const API_KEY = '856dd5c844a271db78e247c96deb2b80';
-  const CITY = 'Manchester,UK';
+  const CITY = 'Tokyo, JP';
 
   const getBackgroundColor = (weatherCondition) => {
     if (!weatherCondition) return '#2193b0';
@@ -33,43 +34,28 @@ export default function App() {
     }
   };
 
-  const getBackgroundImage = (weatherCondition) => {
-    if (!weatherCondition) return require('./assets/img/clear-night.png');
+  const getWeatherImage = (weatherCondition) => {
+    if (!weatherCondition) return require('./assets/img/clear-day.png');
 
     const condition = weatherCondition.toLowerCase();
     if (condition.includes('clear')) {
-      return isNight ? require('./assets/img/clear-night.png') : require('./assets/img/clear-day.png');
+      return isNight 
+        ? require('./assets/img/clear-night.png')
+        : require('./assets/img/clear-day.png');
     } else if (condition.includes('clouds')) {
-      return isNight ? require('./assets/img/cloudy-night.png') : require('./assets/img/cloudy.png');
+      return isNight
+        ? require('./assets/img/cloudy-night.png')
+        : require('./assets/img/cloudy.png');
     } else if (condition.includes('rain')) {
       return require('./assets/img/rain.png');
     } else if (condition.includes('snow')) {
       return require('./assets/img/snow.png');
-    } else if (condition.includes('mist')) {
-      return require('./assets/img/fog.png');
-    } else {
-      return require('./assets/img/clear-night.png');
-    }
-  };
-
-  const getWeatherEmoji = (weatherCondition) => {
-    if (!weatherCondition) return '🌤';
-
-    const condition = weatherCondition.toLowerCase();
-    if (condition.includes('clear')) {
-      return isNight ? '🌙' : '☀️';
-    } else if (condition.includes('clouds')) {
-      return isNight ? '☁️' : '⛅️';
-    } else if (condition.includes('rain')) {
-      return '🌧';
-    } else if (condition.includes('snow')) {
-      return '❄️';
     } else if (condition.includes('mist') || condition.includes('fog')) {
-      return '🌫';
+      return require('./assets/img/fog.png');
     } else if (condition.includes('wind')) {
-      return '💨';
+      return require('./assets/img/wind.png');
     } else {
-      return '🌤';
+      return require('./assets/img/partly-cloudy.png');
     }
   };
 
@@ -91,23 +77,26 @@ export default function App() {
       setLoading(true);
       setError(null);
       
-      const response = await axios.get(
-        `https://api.openweathermap.org/data/2.5/weather?q=${CITY}&appid=${API_KEY}&units=metric&lang=tr`
+      const weatherResponse = await axios.get(
+        `https://api.openweathermap.org/data/2.5/weather?q=${CITY}&appid=${API_KEY}&units=metric&lang=en`
       );
       
-      console.log('API Response:', response.data);
+      const forecastResponse = await axios.get(
+        `https://api.openweathermap.org/data/2.5/forecast?q=${CITY}&appid=${API_KEY}&units=metric&lang=en`
+      );
       
-      setIsNight(checkIfNight(response.data));
-      setWeather(response.data);
+      setIsNight(checkIfNight(weatherResponse.data));
+      setWeather(weatherResponse.data);
+      setForecast(forecastResponse.data);
       setError(null);
     } catch (err) {
       console.error('API Error:', err?.response?.data || err.message);
       if (err.response?.status === 401) {
-        setError('API anahtarı geçersiz. Lütfen geçerli bir API anahtarı kullanın.');
+        setError('Invalid API key. Please use a valid API key.');
       } else if (err.response?.status === 404) {
-        setError('Şehir bulunamadı. Lütfen geçerli bir şehir adı girin.');
+        setError('City not found. Please enter a valid city name.');
       } else {
-        setError('Hava durumu bilgisi alınamadı. Lütfen internet bağlantınızı kontrol edin.');
+        setError('Could not fetch weather data. Please check your internet connection.');
       }
     } finally {
       setLoading(false);
@@ -131,31 +120,58 @@ export default function App() {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: '#2193b0' }]}>
         <ActivityIndicator size="large" color="#ffffff" />
-        <Text style={styles.loadingText}>Hava Durumu Yükleniyor...</Text>
+        <Text style={styles.loadingText}>Loading Weather...</Text>
       </View>
     );
   }
 
   const backgroundColor = weather?.weather?.[0]?.main ? getBackgroundColor(weather.weather[0].main) : '#2193b0';
 
+  const getDayName = (date) => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[new Date(date * 1000).getDay()];
+  };
+
+  const getNextDaysWeather = () => {
+    if (!forecast) return [];
+    const today = new Date().getDate();
+    return forecast.list
+      .filter(item => {
+        const itemDate = new Date(item.dt * 1000);
+        return itemDate.getHours() === 12 && itemDate.getDate() > today;
+      })
+      .slice(0, 5);
+  };
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: '#000000' }]}>
       <View style={styles.weatherContainer}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.cityName}>{weather?.name || 'Bilinmeyen Şehir'}</Text>
-          <Text style={styles.time}>{currentTime}</Text>
-        </View>
+        <Text style={styles.time}>{currentTime}</Text>
         
         <View style={styles.mainContent}>
-          <Text style={styles.weatherEmoji}>
-            {weather?.weather?.[0] && getWeatherEmoji(weather.weather[0].main)}
-          </Text>
-          <Text style={styles.temperature}>
-            {weather?.main && Math.round(weather.main.temp)}°
-          </Text>
-          <Text style={styles.weatherDescription}>
-            {weather?.weather?.[0]?.description}
-          </Text>
+          <Text style={styles.cityName}>{weather?.name || 'Unknown City'}</Text>
+          <View style={styles.temperatureContainer}>
+            <Text style={styles.temperature}>
+              {weather?.main && Math.round(weather.main.temp)}°
+            </Text>
+            <Image 
+              source={weather?.weather?.[0] ? getWeatherImage(weather.weather[0].main) : require('./assets/img/clear-day.png')}
+              style={styles.weatherIcon}
+            />
+          </View>
+        </View>
+
+        <View style={styles.forecastContainer}>
+          {getNextDaysWeather().map((item, index) => (
+            <View key={index} style={styles.forecastItem}>
+              <Text style={styles.forecastDay}>{getDayName(item.dt).slice(0, 3)}</Text>
+              <Image 
+                source={getWeatherImage(item.weather[0].main)}
+                style={styles.forecastIcon}
+              />
+              <Text style={styles.forecastTemp}>{Math.round(item.main.temp)}°</Text>
+            </View>
+          ))}
         </View>
       </View>
       
@@ -168,92 +184,95 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#ffffff',
-    marginTop: 10,
-    fontSize: 16,
-  },
   weatherContainer: {
     flex: 1,
     padding: 20,
   },
-  headerContainer: {
-    marginTop: height * 0.05,
-    alignItems: 'center',
+  time: {
+    fontSize: 16,
+    color: '#ffffff',
+    fontWeight: '400',
+    fontFamily: 'System',
+    marginTop: 10,
+    textAlign: 'center',
   },
   mainContent: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     marginTop: -height * 0.1,
   },
-  time: {
-    fontSize: 20,
-    color: '#ffffff',
-    opacity: 0.8,
-    fontWeight: '300',
-    letterSpacing: 2,
-    marginTop: 5,
-  },
   cityName: {
-    fontSize: height * 0.1,
-    fontWeight: '100',
+    fontSize: 42,
+    fontWeight: '300',
     color: '#ffffff',
     textTransform: 'uppercase',
-    letterSpacing: 5,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 5,
+    fontFamily: 'System',
+    letterSpacing: 2,
     marginBottom: 10,
-    textDecorationLine: 'underline',
-    textDecorationStyle: 'solid',
-    textDecorationColor: '#ffffff',
   },
-  weatherEmoji: {
-    fontSize: width * 0.4,
-    marginBottom: 20,
+  temperatureContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   temperature: {
-    fontSize: height * 0.15,
+    fontSize: 120,
     fontWeight: '200',
     color: '#ffffff',
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 10,
-    marginBottom: 10,
-    lineHeight: height * 0.15,
+    fontFamily: 'System',
   },
-  weatherDescription: {
-    fontSize: height * 0.03,
+  weatherIcon: {
+    width: 100,
+    height: 100,
+    tintColor: '#ffffff',
+    opacity: 0.5,
+    marginLeft: 20,
+  },
+  forecastContainer: {
+    marginTop: 'auto',
+    paddingTop: 20,
+  },
+  forecastItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  forecastDay: {
+    flex: 1,
+    color: '#666666',
+    fontSize: 16,
+    fontWeight: '400',
+    fontFamily: 'System',
+  },
+  forecastIcon: {
+    width: 20,
+    height: 20,
+    tintColor: '#666666',
+    marginHorizontal: 15,
+  },
+  forecastTemp: {
     color: '#ffffff',
-    textTransform: 'capitalize',
-    opacity: 0.8,
-    letterSpacing: 1,
+    fontSize: 20,
+    fontWeight: '300',
+    fontFamily: 'System',
+    width: 40,
+    textAlign: 'right',
   },
   error: {
     position: 'absolute',
-    bottom: 40,
+    top: height * 0.05,
     left: 20,
     right: 20,
     color: '#ffffff',
     fontSize: 16,
     textAlign: 'center',
-    backgroundColor: 'rgba(255,59,48,0.9)',
+    backgroundColor: 'rgba(255, 59, 48, 0.8)',
     padding: 15,
-    borderRadius: 10,
+    borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    fontFamily: 'System',
   },
 }); 
