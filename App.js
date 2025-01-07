@@ -12,8 +12,8 @@ export default function App() {
   const [isNight, setIsNight] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
 
-  const API_KEY = '856dd5c844a271db78e247c96deb2b80';
-  const CITY = 'Tokyo, JP';
+  const API_KEY = '*';
+  const CITY = 'Alaska,US';
 
   const getBackgroundColor = (weatherCondition) => {
     if (!weatherCondition) return '#2193b0';
@@ -34,28 +34,24 @@ export default function App() {
     }
   };
 
-  const getWeatherImage = (weatherCondition) => {
-    if (!weatherCondition) return require('./assets/img/clear-day.png');
+  const getWeatherEmoji = (weatherCondition) => {
+    if (!weatherCondition) return '🌤';
 
     const condition = weatherCondition.toLowerCase();
     if (condition.includes('clear')) {
-      return isNight 
-        ? require('./assets/img/clear-night.png')
-        : require('./assets/img/clear-day.png');
+      return isNight ? '🌙' : '☀️';
     } else if (condition.includes('clouds')) {
-      return isNight
-        ? require('./assets/img/cloudy-night.png')
-        : require('./assets/img/cloudy.png');
+      return isNight ? '☁️' : '⛅️';
     } else if (condition.includes('rain')) {
-      return require('./assets/img/rain.png');
+      return '🌧';
     } else if (condition.includes('snow')) {
-      return require('./assets/img/snow.png');
+      return '❄️';
     } else if (condition.includes('mist') || condition.includes('fog')) {
-      return require('./assets/img/fog.png');
+      return '🌫';
     } else if (condition.includes('wind')) {
-      return require('./assets/img/wind.png');
+      return '💨';
     } else {
-      return require('./assets/img/partly-cloudy.png');
+      return '🌤';
     }
   };
 
@@ -150,14 +146,13 @@ export default function App() {
         
         <View style={styles.mainContent}>
           <Text style={styles.cityName}>{weather?.name || 'Unknown City'}</Text>
-          <View style={styles.temperatureContainer}>
+          <View style={styles.weatherInfo}>
             <Text style={styles.temperature}>
               {weather?.main && Math.round(weather.main.temp)}°
             </Text>
-            <Image 
-              source={weather?.weather?.[0] ? getWeatherImage(weather.weather[0].main) : require('./assets/img/clear-day.png')}
-              style={styles.weatherIcon}
-            />
+            <Text style={styles.weatherEmoji}>
+              {weather?.weather?.[0] ? getWeatherEmoji(weather.weather[0].main) : '🌤'}
+            </Text>
           </View>
         </View>
 
@@ -165,11 +160,10 @@ export default function App() {
           {getNextDaysWeather().map((item, index) => (
             <View key={index} style={styles.forecastItem}>
               <Text style={styles.forecastDay}>{getDayName(item.dt).slice(0, 3)}</Text>
-              <Image 
-                source={getWeatherImage(item.weather[0].main)}
-                style={styles.forecastIcon}
-              />
-              <Text style={styles.forecastTemp}>{Math.round(item.main.temp)}°</Text>
+              <View style={styles.forecastRight}>
+                <Text style={styles.forecastTemp}>{Math.round(item.main.temp)}°</Text>
+                <Text style={styles.forecastEmoji}>{getWeatherEmoji(item.weather[0].main)}</Text>
+              </View>
             </View>
           ))}
         </View>
@@ -189,8 +183,8 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   time: {
-    fontSize: 16,
-    color: '#ffffff',
+    fontSize: 14,
+    color: '#666666',
     fontWeight: '400',
     fontFamily: 'System',
     marginTop: 10,
@@ -203,31 +197,29 @@ const styles = StyleSheet.create({
     marginTop: -height * 0.1,
   },
   cityName: {
-    fontSize: 42,
+    fontSize: 32,
     fontWeight: '300',
     color: '#ffffff',
     textTransform: 'uppercase',
     fontFamily: 'System',
     letterSpacing: 2,
-    marginBottom: 10,
+    marginBottom: 5,
   },
-  temperatureContainer: {
+  weatherInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   temperature: {
-    fontSize: 120,
+    fontSize: 42,
     fontWeight: '200',
     color: '#ffffff',
     fontFamily: 'System',
+    marginRight: 10,
   },
-  weatherIcon: {
-    width: 100,
-    height: 100,
-    tintColor: '#ffffff',
-    opacity: 0.5,
-    marginLeft: 20,
+  weatherEmoji: {
+    fontSize: 42,
+    opacity: 0.9,
   },
   forecastContainer: {
     marginTop: 'auto',
@@ -236,30 +228,31 @@ const styles = StyleSheet.create({
   forecastItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
-    borderTopWidth: 0.5,
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderTopWidth: 0.3,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   forecastDay: {
-    flex: 1,
     color: '#666666',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '400',
     fontFamily: 'System',
   },
-  forecastIcon: {
-    width: 20,
-    height: 20,
-    tintColor: '#666666',
-    marginHorizontal: 15,
+  forecastRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   forecastTemp: {
     color: '#ffffff',
-    fontSize: 20,
+    fontSize: 14,
     fontWeight: '300',
     fontFamily: 'System',
-    width: 40,
-    textAlign: 'right',
+    marginRight: 8,
+  },
+  forecastEmoji: {
+    fontSize: 14,
+    opacity: 0.8,
   },
   error: {
     position: 'absolute',
@@ -267,11 +260,11 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
     backgroundColor: 'rgba(255, 59, 48, 0.8)',
-    padding: 15,
-    borderRadius: 12,
+    padding: 12,
+    borderRadius: 8,
     overflow: 'hidden',
     fontFamily: 'System',
   },
